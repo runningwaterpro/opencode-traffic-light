@@ -119,15 +119,17 @@ class TrafficLightTray:
 
     def run(self):
         # 初始标题用 ASCII，避免 pystray 构造时中文编码问题
-        # 正确中文由 tray-ready → update() 流程通过属性 setter 设置
+        # 正确中文由 _mark_ready → update() 流程通过属性 setter 设置
         self.icon = pystray.Icon(
             "opencode",
             self.icons.get("green"),
             "OpenCode",
             menu=pystray.Menu(pystray.MenuItem("退出", self._on_exit)),
         )
+        # 接管 _mark_ready 回调：确保图标已 visible 后才发送就绪信号
+        tray = self
+        self.icon._mark_ready = lambda: tray._send({"type": "tray-ready"})
         threading.Thread(target=self._read_stdin, daemon=True).start()
-        self._send({"type": "tray-ready"})
         self.icon.run()
 
     def _on_exit(self, icon, item):
