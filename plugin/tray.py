@@ -1,7 +1,11 @@
 import sys, io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+
+if not isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+if not isinstance(sys.stderr, io.TextIOWrapper):
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
+if not isinstance(sys.stdin, io.TextIOWrapper):
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
 import json, threading, pystray
 from PIL import Image
@@ -9,7 +13,7 @@ from pathlib import Path
 
 NOTIFICATION_TITLE = "OpenCode"
 
-NOTIFICATION_BODIES = {
+NOTIFICATION_BODIES: dict[str, str] = {
     "permission": "需要批准权限",
     "question": "需要回答问题",
     "mixed": "需要您的输入",
@@ -32,9 +36,10 @@ class TrafficLightTray:
         for name in ("red", "green", "yellow", "gray"):
             p = d / f"{name}.png"
             if p.exists():
-                self.icons[name] = Image.open(p)
+                with Image.open(p) as img:
+                    self.icons[name] = img.copy()
 
-    def send(self, msg):
+    def _send(self, msg):
         print(json.dumps(msg, ensure_ascii=False), flush=True)
 
     def _read_stdin(self):
@@ -112,13 +117,12 @@ class TrafficLightTray:
             "OpenCode 空闲",
             menu=pystray.Menu(pystray.MenuItem("退出", self._on_exit)),
         )
-        stdin_thread = threading.Thread(target=self._read_stdin, daemon=True)
-        stdin_thread.start()
-        self.send({"type": "tray-ready"})
+        threading.Thread(target=self._read_stdin, daemon=True).start()
+        self._send({"type": "tray-ready"})
         self.icon.run()
 
     def _on_exit(self, icon, item):
-        self.send({"type": "tray-exit"})
+        self._send({"type": "tray-exit"})
         icon.stop()
 
 

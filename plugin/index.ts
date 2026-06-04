@@ -10,6 +10,9 @@ type YellowSubtype = PendingType | "mixed"
 
 const plugin: Plugin = async () => {
   let proc: ChildProcess | null = null
+  let retryCount = 0
+  const maxRetries = 3
+
   const busySessions = new Set<string>()
   const pendingSessions = new Map<string, PendingType>()
 
@@ -26,7 +29,7 @@ const plugin: Plugin = async () => {
     if (pendingSessions.size > 0) {
       overall = "yellow"
       const types = new Set(pendingSessions.values())
-      yellowSubtype = types.size === 1 ? (types.values().next().value as PendingType) : "mixed"
+      yellowSubtype = types.size === 1 ? [...types][0] : "mixed"
     } else if (busySessions.size > 0) {
       overall = "red"
     }
@@ -53,18 +56,29 @@ const plugin: Plugin = async () => {
     })
   }
 
+  let stdoutBuf = ""
+
   function startTray() {
     proc = spawn("pythonw", [join(pluginDir, "tray.py")], {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     })
+    retryCount = 0
 
     proc.stdout?.on("data", (data: Buffer) => {
-      for (const line of data.toString().trim().split("\n")) {
+      stdoutBuf += data.toString()
+      const lines = stdoutBuf.split("\n")
+      stdoutBuf = lines.pop() ?? ""
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
         try {
-          const msg = JSON.parse(line)
+          const msg = JSON.parse(trimmed)
           if (msg.type === "tray-ready") update()
-        } catch { /* ignore malformed messages */ }
+        } catch {
+          console.error("[traffic-light] invalid message:", trimmed.slice(0, 200))
+        }
       }
     })
 
@@ -72,16 +86,26 @@ const plugin: Plugin = async () => {
       console.error("[traffic-light]", data.toString().trim())
     })
 
-    proc.on("exit", () => { proc = null })
+    proc.on("exit", (code) => {
+      proc = null
+      if (code !== 0 && code !== null && retryCount < maxRetries) {
+        retryCount++
+        const delay = retryCount * 1000
+        console.error(`[traffic-light] process exited (${code}), retry ${retryCount}/${maxRetries} in ${delay}ms`)
+        setTimeout(startTray, delay)
+      }
+    })
   }
 
   startTray()
 
   return {
     dispose: async () => {
-      if (proc) {
+      const p = proc
+      if (p) {
         send({ type: "exit" })
-        proc.kill()
+        await new Promise<void>(resolve => p.once("exit", () => resolve()))
+        if (!p.killed) p.kill()
         proc = null
       }
     },
