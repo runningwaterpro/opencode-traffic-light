@@ -1,190 +1,125 @@
 import type { Plugin } from "@opencode-ai/plugin"
-import { spawn, ChildProcess } from "child_process"
+import { spawn, type ChildProcess } from "child_process"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
 
 const pluginDir = dirname(fileURLToPath(import.meta.url))
 
-// 状态类型定义
-type TrayState = {
-  overall: "red" | "yellow" | "green"
-  pendingSessions: Array<{
-    sessionID: string
-    type: "permission" | "question"
-    timestamp: number
-  }>
-}
+type PendingType = "permission" | "question"
+type YellowSubtype = PendingType | "mixed"
 
-type SessionStatus = {
-  sessionID: string
-  status: "idle" | "busy" | "retry"
-}
+const plugin: Plugin = async () => {
+  let proc: ChildProcess | null = null
+  const busySessions = new Set<string>()
+  const pendingSessions = new Map<string, PendingType>()
 
-// 插件主逻辑
-const trafficLightPlugin: Plugin = async ({ client, project, directory }) => {
-  let pythonProcess: ChildProcess | null = null
-  let trayState: TrayState = {
-    overall: "green",
-    pendingSessions: []
-  }
-  
-  // session 状态追踪
-  const sessionStatuses = new Map<string, SessionStatus>()
-
-  // 启动 Python 托盘进程
-  function startTrayProcess() {
-    const scriptPath = join(pluginDir, "tray.py")
-    
-    pythonProcess = spawn("pythonw", [scriptPath], {
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true
-    })
-
-    // 监听 Python 发送的消息
-    pythonProcess.stdout?.on("data", (data) => {
-      const lines = data.toString().split("\n")
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            const msg = JSON.parse(line)
-            handleTrayMessage(msg)
-          } catch (e) {
-            // 忽略解析错误
-          }
-        }
-      }
-    })
-
-    // 监听错误
-    pythonProcess.stderr?.on("data", (data) => {
-      console.error("Tray process error:", data.toString())
-    })
-
-    // 监听进程退出
-    pythonProcess.on("exit", () => {
-      pythonProcess = null
-    })
-  }
-
-  // 处理托盘进程消息
-  function handleTrayMessage(msg: any) {
-    if (msg.type === "tray-ready") {
-      // Python 托盘就绪后立即发送初始状态
-      updateTrayState()
+  function send(msg: Record<string, unknown>) {
+    if (proc?.stdin) {
+      proc.stdin.write(JSON.stringify(msg) + "\n")
     }
   }
 
-  // 发送消息给 Python
-  function sendToTray(msg: any) {
-    if (pythonProcess?.stdin) {
-      pythonProcess.stdin.write(JSON.stringify(msg) + "\n")
-    }
-  }
-
-  const tooltips: Record<string, string> = {
-    red: "OpenCode 处理中...",
-    yellow: "OpenCode 等待您的输入",
-    green: "OpenCode 空闲",
-  }
-
-  function updateTrayState() {
+  function update() {
     let overall: "red" | "yellow" | "green" = "green"
-    
-    if (trayState.pendingSessions.length > 0) {
+    let yellowSubtype: YellowSubtype | undefined
+
+    if (pendingSessions.size > 0) {
       overall = "yellow"
-    } else {
-      for (const status of sessionStatuses.values()) {
-        if (status.status === "busy" || status.status === "retry") {
-          overall = "red"
-          break
-        }
-      }
+      const types = new Set(pendingSessions.values())
+      yellowSubtype = types.size === 1 ? (types.values().next().value as PendingType) : "mixed"
+    } else if (busySessions.size > 0) {
+      overall = "red"
     }
-    
-    trayState.overall = overall
-    
-    sendToTray({
+
+    const tooltips: Record<string, string> = {
+      green: "OpenCode 空闲",
+      red: "OpenCode 处理中...",
+    }
+    const yellowTooltips: Record<YellowSubtype, string> = {
+      permission: "OpenCode 等待您批准权限",
+      question: "OpenCode 等待您回答问题",
+      mixed: "OpenCode 等待您的输入",
+    }
+
+    const tooltip = overall === "yellow" && yellowSubtype
+      ? yellowTooltips[yellowSubtype]
+      : tooltips[overall]
+
+    send({
       type: "state-update",
-      state: trayState,
-      tooltip: tooltips[overall],
+      overall,
+      yellowSubtype: overall === "yellow" ? yellowSubtype : undefined,
+      tooltip,
     })
   }
 
-  // 启动托盘进程
-  startTrayProcess()
+  function startTray() {
+    proc = spawn("pythonw", [join(pluginDir, "tray.py")], {
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+    })
+
+    proc.stdout?.on("data", (data: Buffer) => {
+      for (const line of data.toString().trim().split("\n")) {
+        try {
+          const msg = JSON.parse(line)
+          if (msg.type === "tray-ready") update()
+        } catch { /* ignore malformed messages */ }
+      }
+    })
+
+    proc.stderr?.on("data", (data: Buffer) => {
+      console.error("[traffic-light]", data.toString().trim())
+    })
+
+    proc.on("exit", () => { proc = null })
+  }
+
+  startTray()
 
   return {
-    // 清理函数
     dispose: async () => {
-      if (pythonProcess) {
-        sendToTray({ type: "exit" })
-        pythonProcess.kill()
-        pythonProcess = null
+      if (proc) {
+        send({ type: "exit" })
+        proc.kill()
+        proc = null
       }
     },
 
-    // 事件钩子
     event: async ({ event }) => {
-      const eventType = event.type
+      const { type, properties } = event as any
 
-      // 处理 session 状态变化
-      if (eventType === "session.status") {
-        const { sessionID, status } = (event as any).properties
-        sessionStatuses.set(sessionID, {
-          sessionID,
-          status: status.type
-        })
-        updateTrayState()
+      if (type === "session.status" && (properties.status.type === "busy" || properties.status.type === "retry")) {
+        busySessions.add(properties.sessionID)
+        update()
       }
 
-      // 处理 session 空闲
-      if (eventType === "session.idle") {
-        const { sessionID } = (event as any).properties
-        sessionStatuses.delete(sessionID)
-        updateTrayState()
+      if (type === "session.idle") {
+        busySessions.delete(properties.sessionID)
+        update()
       }
 
-      // 处理权限请求
-      if (eventType === "permission.asked") {
-        const { sessionID } = (event as any).properties
-        trayState.pendingSessions.push({
-          sessionID,
-          type: "permission",
-          timestamp: Date.now()
-        })
-        updateTrayState()
+      if (type === "permission.asked") {
+        pendingSessions.set(properties.sessionID, "permission")
+        update()
       }
 
-      // 处理问题请求
-      if (eventType === "question.asked") {
-        const { sessionID } = (event as any).properties
-        trayState.pendingSessions.push({
-          sessionID,
-          type: "question",
-          timestamp: Date.now()
-        })
-        updateTrayState()
+      if (type === "question.asked") {
+        pendingSessions.set(properties.sessionID, "question")
+        update()
       }
 
-      // 处理权限回复
-      if (eventType === "permission.replied") {
-        const { sessionID } = (event as any).properties
-        trayState.pendingSessions = trayState.pendingSessions.filter(
-          s => !(s.sessionID === sessionID && s.type === "permission")
-        )
-        updateTrayState()
+      if (type === "permission.replied" && pendingSessions.get(properties.sessionID) === "permission") {
+        pendingSessions.delete(properties.sessionID)
+        update()
       }
 
-      // 处理问题回复
-      if (eventType === "question.replied") {
-        const { sessionID } = (event as any).properties
-        trayState.pendingSessions = trayState.pendingSessions.filter(
-          s => !(s.sessionID === sessionID && s.type === "question")
-        )
-        updateTrayState()
+      if (type === "question.replied" && pendingSessions.get(properties.sessionID) === "question") {
+        pendingSessions.delete(properties.sessionID)
+        update()
       }
-    }
+    },
   }
 }
 
-export default trafficLightPlugin
+export default plugin
