@@ -50,10 +50,6 @@ class TrafficLightTray:
         draw.ellipse([4, 4, 60, 60], fill=color)
         return img
     
-    def on_click(self, icon, item):
-        """点击图标时发送消息到 Node.js"""
-        self.send_message({"type": "tray-clicked"})
-    
     def send_message(self, msg):
         """发送消息到 Node.js"""
         print(json.dumps(msg))
@@ -87,6 +83,7 @@ class TrafficLightTray:
     
     def update_icon(self, color_name, tooltip=""):
         """更新托盘图标颜色和悬停提示"""
+        old_color = self.current_color
         self.current_color = color_name
         self.stop_blinking()
 
@@ -95,8 +92,21 @@ class TrafficLightTray:
 
         if color_name == "yellow":
             self.start_blinking()
+            # 黄色：等待输入，弹通知提醒
+            self.show_notification("OpenCode 需要您的输入", tooltip or "OpenCode 需要您的输入")
         elif self.icon and color_name in self.icons:
             self.icon.icon = self.icons[color_name]
+            # 红→绿：处理完成，弹通知
+            if old_color == "red" and color_name == "green":
+                self.show_notification("OpenCode 处理完成", tooltip or "OpenCode 空闲")
+
+    def show_notification(self, title, message):
+        """弹出 Windows 通知（显示约 5-10 秒后自动消失）"""
+        try:
+            if self.icon:
+                self.icon.notify(message, title)
+        except Exception:
+            pass
 
     def start_blinking(self):
         """启动黄色闪烁（500ms 交替黄/灰）"""
@@ -128,7 +138,7 @@ class TrafficLightTray:
         self.icon = pystray.Icon(
             "opencode",
             self.icons.get("green", self.create_icon("green")),
-            "opencode 交通灯"
+            "OpenCode 空闲"
         )
         
         # 设置点击事件

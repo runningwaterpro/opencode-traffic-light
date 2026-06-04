@@ -68,20 +68,9 @@ const trafficLightPlugin: Plugin = async ({ client, project, directory }) => {
 
   // 处理托盘进程消息
   function handleTrayMessage(msg: any) {
-    if (msg.type === "tray-clicked") {
-      // 点击图标时恢复窗口
-      restoreWindow()
-    }
-  }
-
-  // 恢复 opencode 窗口
-  function restoreWindow() {
-    // 查找最早等待的 session
-    const pending = trayState.pendingSessions
-    if (pending.length > 0) {
-      const earliest = pending[0]
-      // 发送恢复窗口消息给 Python
-      sendToTray({ type: "restore-window", sessionID: earliest.sessionID })
+    if (msg.type === "tray-ready") {
+      // Python 托盘就绪后立即发送初始状态
+      updateTrayState()
     }
   }
 
