@@ -1,24 +1,27 @@
-# opencode 交通灯托盘插件
+[English](README.md) | [中文](README.zh-CN.md)
 
-一个 opencode 插件，在系统托盘显示交通灯图标，实时反映 opencode 的状态。
+# opencode Traffic Light Tray Plugin
 
-## 功能
+A system tray plugin for opencode that shows a traffic light icon reflecting the current status in real time.
 
-- 🟢 绿色常亮：opencode 空闲
-- 🔴 红色常亮：opencode 正在思考/处理中
-- 🟡 黄色闪烁（500ms 交替黄/灰）：opencode 等待用户输入（权限/提问）
-- 不同状态下鼠标悬停提示不同文字（空闲 / 处理中... / 等待您的输入）
+## Features
 
-## 前置要求
+- 🟢 Green steady: opencode is idle
+- 🔴 Red steady: opencode is thinking/processing
+- 🟡 Yellow blinking (500ms yellow/gray): waiting for user input (permission or question)
+- Different tooltips on hover per state (Idle / Processing... / Awaiting input)
+- Windows notification popup on state changes (e.g., "Processing complete", "Permission required")
 
-- Python 3，已安装 [pystray](https://pypi.org/project/pystray/) 和 [Pillow](https://pypi.org/project/Pillow/)：
+## Requirements
+
+- Python 3 with [pystray](https://pypi.org/project/pystray/) and [Pillow](https://pypi.org/project/Pillow/):
   ```bash
   pip install pystray Pillow
   ```
 
-## 安装
+## Installation
 
-将 `plugin/` 文件夹复制到 opencode 插件目录下，重命名为 `traffic-light/`：
+Copy the `plugin/` folder to the opencode plugins directory and rename it to `traffic-light/`:
 
 ```bash
 # Windows
@@ -28,7 +31,7 @@ xcopy /E plugin %USERPROFILE%\.config\opencode\plugins\traffic-light\
 cp -r plugin ~/.config/opencode/plugins/traffic-light/
 ```
 
-然后编辑 `opencode.json`（位于 `~/.config/opencode/`），在 `plugin` 数组中添加：
+Then edit `opencode.json` (in `~/.config/opencode/`) and add the path to the `plugin` array:
 
 ```json
 {
@@ -38,20 +41,21 @@ cp -r plugin ~/.config/opencode/plugins/traffic-light/
 }
 ```
 
-> 每个插件使用独立子目录，文件无需改名，复制即可用。opencode 的自动发现只扫描 `plugins/` 根目录，需要在 `opencode.json` 中用 `file:///` URI 显式引用子目录中的插件。
+> Each plugin should use its own subdirectory. opencode's auto-discovery only scans the root of `plugins/`, so you need to reference the subdirectory with a `file:///` URI.
 
-## 使用
+## Usage
 
-启动 opencode 后，系统托盘会出现交通灯图标：
+After launching opencode, a traffic light icon appears in the system tray:
 
-- 图标颜色和悬停提示反映当前状态
-- 黄色闪烁时表示有权限请求或提问等待处理
+- Icon color and tooltip reflect the current status
+- Yellow blinking indicates pending permission requests or questions
+- Right-click "Exit" to quit
 
-## 项目结构
+## Project Structure
 
 ```
 opencode-traffic-light/
-├── plugin/          # ← 复制这个文件夹到 plugins/traffic-light/
+├── plugin/          # ← copy this folder to plugins/traffic-light/
 │   ├── index.ts
 │   ├── tray.py
 │   └── icons/
@@ -59,13 +63,6 @@ opencode-traffic-light/
 └── requirements.txt
 ```
 
-## 开发
-
-```bash
-npm install
-pip install -r requirements.txt
-```
-
-## 许可证
+## License
 
 MIT
