@@ -9,39 +9,35 @@
 - 🟡 黄色闪烁（500ms 交替黄/灰）：opencode 等待用户输入（权限/提问）
 - 不同状态下鼠标悬停提示不同文字（空闲 / 处理中... / 等待您的输入）
 
+## 前置要求
+
+- Python 3，已安装 [pystray](https://pypi.org/project/pystray/) 和 [Pillow](https://pypi.org/project/Pillow/)：
+  ```bash
+  pip install pystray Pillow
+  ```
+
 ## 安装
 
-### 1. 安装 Python 依赖
+### 方式一：直接复制文件（推荐）
+
+1. 将项目中的 `index.ts`、`tray.py`、`icons/`、`package.json` 复制到 opencode 插件目录：
+
+   | 平台 | 插件目录 |
+   |------|---------|
+   | Windows | `%USERPROFILE%\.config\opencode\plugins\` |
+   | macOS/Linux | `~/.config/opencode/plugins/` |
+
+2. 插件会被 opencode **自动加载**，无需修改任何配置文件。
+
+### 方式二：从 GitHub 克隆
 
 ```bash
-pip install pystray Pillow
+git clone https://github.com/runningwaterpro/opencode-traffic-light.git
+cd opencode-traffic-light
+npm install          # 安装 TypeScript 类型定义（可选，用于编辑器提示）
 ```
 
-### 2. 放置插件文件
-
-将 `index.ts`、`tray.py`、`icons/`、`package.json` 放入 opencode 插件目录：
-
-```bash
-# Windows
-%USERPROFILE%\.config\opencode\plugins\
-
-# macOS/Linux
-~/.config/opencode/plugins/
-```
-
-插件文件放入后会被 opencode 自动加载，无需修改 `opencode.json`。
-
-### 3. 配置 npm 依赖
-
-如需使用外部 npm 包，在 `~/.config/opencode/` 下创建 `package.json`：
-
-```json
-{
-  "dependencies": {
-    "@opencode-ai/plugin": "^1.15.13"
-  }
-}
-```
+然后将 `index.ts`、`tray.py`、`icons/`、`package.json` 复制到上面的插件目录。也可将整个项目目录链接到插件目录。openCode 会自动扫描该目录并加载插件。
 
 ## 使用
 
