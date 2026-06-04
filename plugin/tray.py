@@ -1,4 +1,4 @@
-import sys, io
+import sys, io, ctypes
 
 if not isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -6,6 +6,13 @@ if not isinstance(sys.stderr, io.TextIOWrapper):
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 if not isinstance(sys.stdin, io.TextIOWrapper):
     sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
+
+# 单实例互斥体：多个 opencode 实例只留一个托盘图标
+kernel32 = ctypes.windll.kernel32
+_mutex = kernel32.CreateMutexW(None, False, "Local\\opencode-traffic-light")
+if _mutex and kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+    kernel32.CloseHandle(_mutex)
+    sys.exit(0)
 
 import json, threading, pystray
 from PIL import Image
@@ -111,10 +118,12 @@ class TrafficLightTray:
         t.start()
 
     def run(self):
+        # 初始标题用 ASCII，避免 pystray 构造时中文编码问题
+        # 正确中文由 tray-ready → update() 流程通过属性 setter 设置
         self.icon = pystray.Icon(
             "opencode",
             self.icons.get("green"),
-            "OpenCode 空闲",
+            "OpenCode",
             menu=pystray.Menu(pystray.MenuItem("退出", self._on_exit)),
         )
         threading.Thread(target=self._read_stdin, daemon=True).start()
