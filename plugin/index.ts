@@ -35,13 +35,13 @@ const plugin: Plugin = async () => {
     }
 
     const tooltips: Record<string, string> = {
-      green: "OpenCode 空闲",
-      red: "OpenCode 处理中...",
+      green: "OpenCode Idle",
+      red: "OpenCode Busy...",
     }
     const yellowTooltips: Record<YellowSubtype, string> = {
-      permission: "OpenCode 等待您批准权限",
-      question: "OpenCode 等待您回答问题",
-      mixed: "OpenCode 等待您的输入",
+      permission: "OpenCode awaits permission",
+      question: "OpenCode awaits input",
+      mixed: "OpenCode is waiting",
     }
 
     const tooltip = overall === "yellow" && yellowSubtype
@@ -62,6 +62,7 @@ const plugin: Plugin = async () => {
     proc = spawn("pythonw", [join(pluginDir, "tray.py")], {
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
+      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
     })
     retryCount = 0
 
