@@ -18,18 +18,19 @@
 
 ## 安装
 
-### 方式一：直接复制文件（推荐）
+### 方式一：直接复制（推荐）
 
-1. 在 opencode 插件目录下创建 `traffic-light/` 子目录：
+1. 将整个项目复制为 opencode 插件目录下的 `traffic-light/` 子目录：
 
-   | 平台 | 插件目录 |
-   |------|---------|
-   | Windows | `%USERPROFILE%\.config\opencode\plugins\` |
-   | macOS/Linux | `~/.config/opencode/plugins/` |
+   ```bash
+   # Windows
+   xcopy /E opencode-traffic-light %USERPROFILE%\.config\opencode\plugins\traffic-light\
 
-2. 将 `index.ts`、`tray.py`、`icons/` 复制到该子目录。
+   # macOS/Linux
+   cp -r opencode-traffic-light ~/.config/opencode/plugins/traffic-light/
+   ```
 
-3. 编辑 `opencode.json`（与 `plugins/` 同目录），在 `plugin` 数组中添加 `file:///` 路径：
+2. 编辑 `opencode.json`（位于 `~/.config/opencode/`），在 `plugin` 数组中添加：
 
    ```json
    {
@@ -47,9 +48,9 @@ cd opencode-traffic-light
 npm install          # 安装 TypeScript 类型定义（可选）
 ```
 
-然后在插件目录下创建 `traffic-light/` 子目录，将 `index.ts`、`tray.py`、`icons/` 复制进去，并配置 `opencode.json` 添加 `file:///` 路径。
+然后按方式一的步骤复制到插件目录并配置 `opencode.json`。
 
-> 每个插件使用独立子目录可以避免文件命名冲突，项目结构更清晰。虽然 opencode 的自动发现只扫描 `plugins/` 根目录的 `.ts` 文件，但通过 `opencode.json` 的 `file:///` URI 可以加载子目录中的插件。
+> 每个插件使用独立子目录，文件命名无需修改，直接复制即可。opencode 的自动发现只扫描 `plugins/` 根目录，因此需要在 `opencode.json` 中用 `file:///` URI 显式引用子目录中的插件。
 
 ## 使用
 
@@ -58,25 +59,23 @@ npm install          # 安装 TypeScript 类型定义（可选）
 - 图标颜色和悬停提示反映当前状态
 - 黄色闪烁时表示有权限请求或提问等待处理
 
-## 开发
-
-### 项目结构
+## 项目结构
 
 ```
 opencode-traffic-light/
-├── traffic-light.ts  # 插件主逻辑（TypeScript，开发入口）
-├── tray.py           # Python 托盘脚本（pystray）
-├── icons/            # 红绿黄灰四个圆形图标
-├── package.json      # npm 依赖（本地开发用）
-└── requirements.txt  # Python 依赖
+├── index.ts      # 插件主逻辑（TypeScript）
+├── tray.py       # Python 托盘脚本（pystray）
+├── icons/        # 红绿黄灰四个圆形图标
+├── package.json  # npm 依赖（本地开发用）
+├── requirements.txt
+└── README.md
 ```
 
-注：安装到 `plugins/` 时，需将 `traffic-light.ts` 重命名为 `index.ts` 并放入 `traffic-light/` 子目录。
+所有文件已按最终安装时的结构命名，复制后无需改名。
 
-### 本地开发
+## 开发
 
 ```bash
-# 安装依赖
 npm install
 pip install -r requirements.txt
 ```
