@@ -56,7 +56,6 @@ opencode-traffic-light/
 │   ├── tray.py
 │   └── icons/
 ├── README.md
-├── package.json     # 仅本地开发用
 └── requirements.txt
 ```
 
