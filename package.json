@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "opencode 系统托盘交通灯插件",
   "type": "module",
-  "main": "index.ts",
+  "main": "traffic-light.ts",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

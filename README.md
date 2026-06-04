@@ -20,7 +20,7 @@
 
 ### 方式一：直接复制文件（推荐）
 
-1. 将项目中的 `index.ts`、`tray.py`、`icons/`、`package.json` 复制到 opencode 插件目录：
+1. 将项目中的 `traffic-light.ts`、`tray.py`、`icons/` 复制到 opencode 插件目录（`package.json` 不需要，仅用于本地开发）：
 
    | 平台 | 插件目录 |
    |------|---------|
@@ -37,7 +37,9 @@ cd opencode-traffic-light
 npm install          # 安装 TypeScript 类型定义（可选，用于编辑器提示）
 ```
 
-然后将 `index.ts`、`tray.py`、`icons/`、`package.json` 复制到上面的插件目录。也可将整个项目目录链接到插件目录。openCode 会自动扫描该目录并加载插件。
+然后将 `traffic-light.ts`、`tray.py`、`icons/` 复制到上面的插件目录。openCode 会自动扫描该目录并加载插件。
+
+> 文件命名建议：将插件文件命名为 `traffic-light.ts` 可避免与其他插件冲突。openCode 会加载 `plugins/` 目录下的所有 `.ts` 文件。
 
 ## 使用
 
@@ -52,11 +54,11 @@ npm install          # 安装 TypeScript 类型定义（可选，用于编辑器
 
 ```
 opencode-traffic-light/
-├── index.ts          # 插件主逻辑（TypeScript）
+├── traffic-light.ts  # 插件主逻辑（TypeScript）
 ├── tray.py           # Python 托盘脚本（pystray）
 ├── icons/            # 红绿黄灰四个圆形图标
-├── package.json
-└── requirements.txt
+├── package.json      # npm 依赖（本地开发用）
+└── requirements.txt  # Python 依赖
 ```
 
 ### 本地开发
