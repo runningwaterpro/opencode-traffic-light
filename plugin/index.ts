@@ -71,7 +71,6 @@ const plugin: Plugin = async ({directory}) => {
       windowsHide: true,
       env: { ...process.env, PYTHONIOENCODING: "utf-8" },
     })
-    retryCount = 0
 
     proc.stdout?.on("data", (data: Buffer) => {
       stdoutBuf += data.toString()
@@ -84,7 +83,7 @@ const plugin: Plugin = async ({directory}) => {
         if (!trimmed) continue
         try {
           const msg = JSON.parse(trimmed)
-          if (msg.type === "tray-ready" && !trayReady) { trayReady = true; update() }
+          if (msg.type === "tray-ready" && !trayReady) { trayReady = true; retryCount = 0; update() }
         } catch {
           console.error("[traffic-light] invalid message:", trimmed.slice(0, 200))
         }
@@ -99,6 +98,7 @@ const plugin: Plugin = async ({directory}) => {
       proc = null
       if (code !== 0 && code !== null && retryCount < maxRetries) {
         retryCount++
+        trayReady = false
         const delay = retryCount * 1000
         console.error(`[traffic-light] process exited (${code}), retry ${retryCount}/${maxRetries} in ${delay}ms`)
         setTimeout(startTray, delay)
