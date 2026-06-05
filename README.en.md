@@ -51,6 +51,10 @@ After launching opencode, a traffic light icon appears in the system tray:
 - Yellow blinking indicates pending permission requests or questions
 - Right-click "Exit" to quit
 
+## OpenCode Web
+
+Especially useful with [OpenCode Web](https://github.com/open-code-ai/opencode) — when accessing from a mobile browser, the page may not auto-refresh and can appear stuck on "thinking". Just glance at the tray icon: green means the agent is done, refresh the page and see the result.
+
 ## Project Structure
 
 ```

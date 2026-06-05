@@ -51,6 +51,10 @@ cp -r plugin ~/.config/opencode/plugins/traffic-light/
 - 黄色闪烁时表示有权限请求或提问等待处理
 - 右键菜单选择"退出"可关闭托盘图标
 
+## OpenCode Web
+
+配合 [OpenCode Web](https://github.com/open-code-ai/opencode) 使用时尤其有用——用手机浏览器访问时，页面可能不会自动刷新，看起来 Agent 一直在思考。瞄一眼系统托盘图标：变绿了就是处理完了，刷新页面就能看到结果，不用傻等。
+
 ## 项目结构
 
 ```
