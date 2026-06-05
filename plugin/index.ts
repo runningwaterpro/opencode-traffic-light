@@ -57,7 +57,7 @@ const plugin: Plugin = async ({directory}) => {
       type: "state-update",
       overall,
       yellowSubtype: overall === "yellow" ? yellowSubtype : undefined,
-      tooltip: lines.join("\n"),
+      tooltip: lines.join("\n\n"),
     })
   }
 
