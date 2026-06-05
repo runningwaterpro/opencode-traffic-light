@@ -57,6 +57,8 @@ const plugin: Plugin = async () => {
   }
 
   let stdoutBuf = ""
+  const MAX_STDOUT_BUF = 65536
+  let trayReady = false
 
   function startTray() {
     proc = spawn("pythonw", [join(pluginDir, "tray.py")], {
@@ -68,6 +70,7 @@ const plugin: Plugin = async () => {
 
     proc.stdout?.on("data", (data: Buffer) => {
       stdoutBuf += data.toString()
+      if (stdoutBuf.length > MAX_STDOUT_BUF) stdoutBuf = stdoutBuf.slice(-MAX_STDOUT_BUF)
       const lines = stdoutBuf.split("\n")
       stdoutBuf = lines.pop() ?? ""
 
@@ -76,7 +79,7 @@ const plugin: Plugin = async () => {
         if (!trimmed) continue
         try {
           const msg = JSON.parse(trimmed)
-          if (msg.type === "tray-ready") update()
+          if (msg.type === "tray-ready" && !trayReady) { trayReady = true; update() }
         } catch {
           console.error("[traffic-light] invalid message:", trimmed.slice(0, 200))
         }
@@ -105,7 +108,10 @@ const plugin: Plugin = async () => {
       const p = proc
       if (p) {
         send({ type: "exit" })
-        await new Promise<void>(resolve => p.once("exit", () => resolve()))
+        await Promise.race([
+          new Promise<void>(resolve => p.once("exit", () => resolve())),
+          new Promise<void>(resolve => setTimeout(resolve, 3000)),
+        ])
         if (!p.killed) p.kill()
         proc = null
       }
@@ -121,6 +127,7 @@ const plugin: Plugin = async () => {
 
       if (type === "session.idle") {
         busySessions.delete(properties.sessionID)
+        pendingSessions.delete(properties.sessionID)
         update()
       }
 

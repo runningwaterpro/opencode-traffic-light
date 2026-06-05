@@ -26,6 +26,7 @@ class TrafficLightTray:
         self.blinking = False
         self.blink_state = False
         self.blink_timer = None
+        self._lock = threading.RLock()
         self._load_icons()
 
     def _load_icons(self):
@@ -61,9 +62,10 @@ class TrafficLightTray:
             self.icon.stop()
 
     def _update(self, color, tooltip="", yellow_subtype=None):
-        old = self.current_color
-        self.current_color = color
-        self._stop_blink()
+        with self._lock:
+            old = self.current_color
+            self.current_color = color
+            self._stop_blink()
 
         if tooltip and self.icon:
             self.icon.title = tooltip
@@ -85,26 +87,29 @@ class TrafficLightTray:
             pass
 
     def _start_blink(self):
-        if self.blinking:
-            return
-        self.blinking = True
-        self.blink_state = True
-        self._blink_tick()
+        with self._lock:
+            if self.blinking:
+                return
+            self.blinking = True
+            self.blink_state = True
+            self._blink_tick()
 
     def _stop_blink(self):
-        self.blinking = False
-        if self.blink_timer:
-            self.blink_timer.cancel()
-            self.blink_timer = None
+        with self._lock:
+            self.blinking = False
+            if self.blink_timer:
+                self.blink_timer.cancel()
+                self.blink_timer = None
 
     def _blink_tick(self):
-        if not self.blinking or not self.icon:
-            return
-        self.icon.icon = self.icons.get("yellow" if self.blink_state else "gray")
-        self.blink_state = not self.blink_state
-        t = threading.Timer(0.5, self._blink_tick)
-        t.daemon = True
-        self.blink_timer = t
+        with self._lock:
+            if not self.blinking or not self.icon:
+                return
+            self.icon.icon = self.icons.get("yellow" if self.blink_state else "gray")
+            self.blink_state = not self.blink_state
+            t = threading.Timer(0.5, self._blink_tick)
+            t.daemon = True
+            self.blink_timer = t
         t.start()
 
     def run(self):
