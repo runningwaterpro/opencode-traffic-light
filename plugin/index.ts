@@ -8,7 +8,7 @@ const pluginDir = dirname(fileURLToPath(import.meta.url))
 type PendingType = "permission" | "question"
 type YellowSubtype = PendingType | "mixed"
 
-const plugin: Plugin = async () => {
+const plugin: Plugin = async ({directory}) => {
   let proc: ChildProcess | null = null
   let retryCount = 0
   const maxRetries = 3
@@ -34,25 +34,30 @@ const plugin: Plugin = async () => {
       overall = "red"
     }
 
-    const tooltips: Record<string, string> = {
-      green: "OpenCode Idle",
-      red: "OpenCode Busy...",
-    }
-    const yellowTooltips: Record<YellowSubtype, string> = {
-      permission: "OpenCode awaits permission",
-      question: "OpenCode awaits input",
-      mixed: "OpenCode is waiting",
-    }
+    const busyCount = busySessions.size
+    const permissionCount = Array.from(pendingSessions.values()).filter(v => v === "permission").length
+    const questionCount = Array.from(pendingSessions.values()).filter(v => v === "question").length
 
-    const tooltip = overall === "yellow" && yellowSubtype
-      ? yellowTooltips[yellowSubtype]
-      : tooltips[overall]
+    const lines = [directory]
+    if (overall === "green") {
+      lines.push("Idle")
+    } else {
+      if (busyCount > 0) {
+        lines.push(`${busyCount} session${busyCount !== 1 ? "s" : ""} busy`)
+      }
+      if (permissionCount > 0) {
+        lines.push(`${permissionCount} permission request${permissionCount !== 1 ? "s" : ""}`)
+      }
+      if (questionCount > 0) {
+        lines.push(`${questionCount} question${questionCount !== 1 ? "s" : ""} pending`)
+      }
+    }
 
     send({
       type: "state-update",
       overall,
       yellowSubtype: overall === "yellow" ? yellowSubtype : undefined,
-      tooltip,
+      tooltip: lines.join("\n"),
     })
   }
 
