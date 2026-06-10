@@ -70,14 +70,15 @@ class TrafficLightTray:
         if tooltip and self.icon:
             self.icon.title = tooltip
 
+        if self.icon and color in self.icons:
+            self.icon.icon = self.icons[color]
+
         if color == "yellow":
             self._start_blink()
             body = NOTIFICATION_BODIES.get(yellow_subtype, NOTIFICATION_BODIES["mixed"])
             self._notify(body)
-        elif self.icon and color in self.icons:
-            self.icon.icon = self.icons[color]
-            if old == "red" and color == "green":
-                self._notify(NOTIFICATION_BODIES["done"])
+        elif old == "red" and color == "green":
+            self._notify(NOTIFICATION_BODIES["done"])
 
     def _notify(self, message):
         try:
