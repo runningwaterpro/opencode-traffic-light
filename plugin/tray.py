@@ -4,9 +4,10 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
-import json, threading, pystray
+import json, threading, tempfile, pystray
 from PIL import Image
 from pathlib import Path
+from winotify import Notification as Toast, audio as toast_audio
 
 NOTIFICATION_TITLE = "OpenCode"
 
@@ -22,12 +23,14 @@ class TrafficLightTray:
     def __init__(self):
         self.icon = None
         self.icons: dict[str, Image.Image] = {}
+        self.notify_icons: dict[str, Path] = {}
         self.current_color = "green"
         self.blinking = False
         self.blink_state = False
         self.blink_timer = None
         self._lock = threading.RLock()
         self._load_icons()
+        self._load_notify_icons()
 
     def _load_icons(self):
         d = Path(__file__).parent / "icons"
@@ -36,6 +39,14 @@ class TrafficLightTray:
             if p.exists():
                 with Image.open(p) as img:
                     self.icons[name] = img.copy()
+
+    def _load_notify_icons(self):
+        tmp = Path(tempfile.gettempdir()) / "opencode-traffic-light"
+        tmp.mkdir(exist_ok=True)
+        for name, img in self.icons.items():
+            p = tmp / f"{name}_48.png"
+            img.resize((64, 64), Image.LANCZOS).save(p)
+            self.notify_icons[name] = p
 
     def _send(self, msg):
         print(json.dumps(msg, ensure_ascii=False), flush=True)
@@ -76,14 +87,23 @@ class TrafficLightTray:
         if color == "yellow":
             self._start_blink()
             body = NOTIFICATION_BODIES.get(yellow_subtype, NOTIFICATION_BODIES["mixed"])
-            self._notify(body)
+            self._notify(body, "yellow")
         elif old == "red" and color == "green":
-            self._notify(NOTIFICATION_BODIES["done"])
+            self._notify(NOTIFICATION_BODIES["done"], "green")
 
-    def _notify(self, message):
+    def _notify(self, message, color="green"):
         try:
-            if self.icon:
-                self.icon.notify(message, NOTIFICATION_TITLE)
+            icon_path = str(self.notify_icons.get(color, self.notify_icons.get("green")))
+            toast = Toast(
+                app_id=NOTIFICATION_TITLE,
+                title="",
+                msg=message,
+                icon=icon_path,
+                duration="short",
+            )
+            toast.tag = "opencode-status"
+            toast.set_audio(toast_audio.Default, loop=False)
+            toast.show()
         except Exception:
             pass
 
