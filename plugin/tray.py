@@ -68,11 +68,12 @@ class TrafficLightTray:
                 color=msg.get("overall", "green"),
                 tooltip=msg.get("tooltip", ""),
                 yellow_subtype=msg.get("yellowSubtype"),
+                directory=msg.get("directory", ""),
             )
         elif t == "exit" and self.icon:
             self.icon.stop()
 
-    def _update(self, color, tooltip="", yellow_subtype=None):
+    def _update(self, color, tooltip="", yellow_subtype=None, directory=""):
         with self._lock:
             old = self.current_color
             self.current_color = color
@@ -87,17 +88,18 @@ class TrafficLightTray:
         if color == "yellow":
             self._start_blink()
             body = NOTIFICATION_BODIES.get(yellow_subtype, NOTIFICATION_BODIES["mixed"])
-            self._notify(body, "yellow")
+            self._notify(body, "yellow", directory)
         elif old == "red" and color == "green":
-            self._notify(NOTIFICATION_BODIES["done"], "green")
+            self._notify(NOTIFICATION_BODIES["done"], "green", directory)
 
-    def _notify(self, message, color="green"):
+    def _notify(self, message, color="green", directory=""):
         try:
+            msg = message + "\n\n" + directory if directory else message
             icon_path = str(self.notify_icons.get(color, self.notify_icons.get("green")))
             toast = Toast(
                 app_id=NOTIFICATION_TITLE,
                 title="",
-                msg=message,
+                msg=msg,
                 icon=icon_path,
                 duration="short",
             )

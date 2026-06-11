@@ -58,6 +58,7 @@ const plugin: Plugin = async ({directory}) => {
       overall,
       yellowSubtype: overall === "yellow" ? yellowSubtype : undefined,
       tooltip: lines.join("\n\n"),
+      directory,
     })
   }
 
