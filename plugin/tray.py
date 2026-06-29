@@ -53,13 +53,15 @@ class TrafficLightTray:
 
     def _read_stdin(self):
         while True:
-            line = sys.stdin.readline()
-            if not line:
-                break
             try:
+                line = sys.stdin.readline()
+                if not line:
+                    break
                 self._handle(json.loads(line.strip()))
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, ValueError):
                 pass
+            except OSError:
+                break
 
     def _handle(self, msg):
         t = msg.get("type")
