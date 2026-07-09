@@ -4,7 +4,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8")
 
-import json, threading, tempfile, pystray
+import atexit, json, threading, tempfile, pystray
 from PIL import Image
 from pathlib import Path
 from winotify import Notification as Toast, audio as toast_audio
@@ -145,6 +145,8 @@ class TrafficLightTray:
             menu=pystray.Menu(pystray.MenuItem("退出", self._on_exit)),
         )
         threading.Thread(target=self._read_stdin, daemon=True).start()
+        # ponytail: closing stdin unblocks daemon thread's readline() at shutdown
+        atexit.register(lambda: sys.stdin.close())
         tray = self
         _orig_mark_ready = self.icon._mark_ready
         self.icon._mark_ready = lambda: (
@@ -155,6 +157,10 @@ class TrafficLightTray:
 
     def _on_exit(self, icon, item):
         self._send({"type": "tray-exit"})
+        try:
+            sys.stdin.close()
+        except OSError:
+            pass
         icon.stop()
 
 
