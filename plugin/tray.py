@@ -71,11 +71,12 @@ class TrafficLightTray:
                 tooltip=msg.get("tooltip", ""),
                 yellow_subtype=msg.get("yellowSubtype"),
                 directory=msg.get("directory", ""),
+                permission_dirs=msg.get("permissionDirs", []),
             )
         elif t == "exit" and self.icon:
             self.icon.stop()
 
-    def _update(self, color, tooltip="", yellow_subtype=None, directory=""):
+    def _update(self, color, tooltip="", yellow_subtype=None, directory="", permission_dirs=None):
         with self._lock:
             old = self.current_color
             self.current_color = color
@@ -90,13 +91,18 @@ class TrafficLightTray:
         if color == "yellow":
             self._start_blink()
             body = NOTIFICATION_BODIES.get(yellow_subtype, NOTIFICATION_BODIES["mixed"])
-            self._notify(body, "yellow", directory)
+            is_permission = yellow_subtype == "permission"
+            self._notify(body, "yellow", directory, permission_dirs or [], is_permission)
         elif old == "red" and color == "green":
             self._notify(NOTIFICATION_BODIES["done"], "green", directory)
 
-    def _notify(self, message, color="green", directory=""):
+    def _notify(self, message, color="green", project_dir="", permission_dirs=None, is_permission=False):
         try:
-            msg = message + "\n\n" + directory if directory else message
+            if is_permission and permission_dirs:
+                dirs_str = "\n".join(f"授权目录：{d}" for d in permission_dirs)
+                msg = f"{message}\n\n项目目录：{project_dir}\n\n{dirs_str}"
+            else:
+                msg = f"{message}\n\n项目目录：{project_dir}" if project_dir else message
             icon_path = str(self.notify_icons.get(color, self.notify_icons.get("green")))
             toast = Toast(
                 app_id=NOTIFICATION_TITLE,

@@ -15,6 +15,7 @@ const plugin: Plugin = async ({directory}) => {
 
   const busySessions = new Set<string>()
   const pendingSessions = new Map<string, PendingType>()
+  const permissionDirs = new Map<string, string>()
 
   function send(msg: Record<string, unknown>) {
     if (proc?.stdin) {
@@ -53,12 +54,15 @@ const plugin: Plugin = async ({directory}) => {
       }
     }
 
+    const dirs = [...new Set(permissionDirs.values())]
+
     send({
       type: "state-update",
       overall,
       yellowSubtype: overall === "yellow" ? yellowSubtype : undefined,
       tooltip: lines.join("\n\n"),
       directory,
+      permissionDirs: dirs,
     })
   }
 
@@ -134,11 +138,14 @@ const plugin: Plugin = async ({directory}) => {
       if (type === "session.idle") {
         busySessions.delete(properties.sessionID)
         pendingSessions.delete(properties.sessionID)
+        permissionDirs.delete(properties.sessionID)
         update()
       }
 
       if (type === "permission.asked") {
         pendingSessions.set(properties.sessionID, "permission")
+        const dir = properties.metadata?.parentDir || properties.metadata?.filepath
+        if (dir) permissionDirs.set(properties.sessionID, dir)
         update()
       }
 
@@ -149,6 +156,7 @@ const plugin: Plugin = async ({directory}) => {
 
       if (type === "permission.replied" && pendingSessions.get(properties.sessionID) === "permission") {
         pendingSessions.delete(properties.sessionID)
+        permissionDirs.delete(properties.sessionID)
         update()
       }
 
